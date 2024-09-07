@@ -1,24 +1,22 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.9-slim
+# Production stage
+FROM python:alpine AS production
 
-# Set the working directory in the container
-WORKDIR /app
+WORKDIR /python-docker
 
-# Copy the requirements.txt file into the container
-COPY requirements.txt .
+# Copy only the necessary files for production
+COPY requirements.txt requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Install the Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the application code into the container
 COPY . .
 
-# Expose port 5000 (the default Flask port)
+# Create a new user with UID 10016
+RUN addgroup -g 10016 choreo && \
+    adduser  --disabled-password  --no-create-home --uid 10016 --ingroup choreo choreouser
+
+# Switch to the new user
+USER 10016
+
 EXPOSE 5000
 
-# Set environment variables for Flask
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
-
-# Command to run the Flask application
-CMD ["flask", "run"]
+# Start the Flask application
+CMD ["flask", "run", "--host=0.0.0.0"]
