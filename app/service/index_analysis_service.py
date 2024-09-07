@@ -3,6 +3,7 @@ import numpy as np
 import re
 import os
 
+# TODO: NDVI, RENDVI, CIRE, PRI
 
 def save_ndvi(ndvi, reference_band_path, output_path):
     """
