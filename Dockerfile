@@ -1,5 +1,5 @@
 # Production stage
-FROM python:alpine AS production
+FROM python:alpine
 
 WORKDIR /python-docker
 
