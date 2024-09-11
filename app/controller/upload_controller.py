@@ -12,6 +12,12 @@ def validate_project_id(project_id):
     return project is not None
 
 def image_upload_controller(project_id):
+
+    odm_project_id = request.args.get('odm_project_id')
+    task_id = request.args.get('task_id')    
+    print(odm_project_id)
+    print(task_id)
+
     # Validate project_id
     if not validate_project_id(project_id):
         return jsonify({'error': f'Project ID {project_id} does not exist'}), 404

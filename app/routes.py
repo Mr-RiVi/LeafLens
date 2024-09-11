@@ -10,3 +10,12 @@ app.add_url_rule("/project/list", "fetch_projects", fetch_projects_controller, m
 app.add_url_rule("/projects/<int:project_id>/upload", "image_upload", image_upload_controller, methods=['POST'])
 
 app.add_url_rule("/project/<int:project_id>/start", "analyze_images", analysis_controller, methods=['POST'])
+
+# curl --location --request POST 'http://127.0.0.1:5000/project/4/start'
+
+# curl --location 'http://127.0.0.1:5000/projects/4/upload' \
+# --form 'files[]=@"/home/fernando-mrr/Downloads/rgb_image/DJI_20240424101831_0001_D.jpg"' \
+# --form 'files[]=@"/home/fernando-mrr/Downloads/rgb_image/DJI_20240424101831_0001_MS_G.TIF"' \
+# --form 'files[]=@"/home/fernando-mrr/Downloads/rgb_image/DJI_20240424101831_0001_MS_NIR.TIF"' \
+# --form 'files[]=@"/home/fernando-mrr/Downloads/rgb_image/DJI_20240424101831_0001_MS_R.TIF"' \
+# --form 'files[]=@"/home/fernando-mrr/Downloads/rgb_image/DJI_20240424101831_0001_MS_RE.TIF"'
