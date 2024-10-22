@@ -98,17 +98,18 @@ def analysis_controller(project_id):
     
     # Extract URLs from the image objects
     image_urls = [image.image_url for image in images]
-
     responses = []
     
     try:
-        # TODO: need to refactor - preprocessor does not provide correct results
-        preprocessed_images = preprocessor(image_urls)
-        ndvi_results, rendvi_results, cire_results, pri_results = calculate_indexes(preprocessed_images)
-        index_result_data = create_responsev2(ndvi_results, rendvi_results, cire_results, pri_results)
+        preprocessed_images_task = preprocessor.apply_async(args=[image_urls])
+        # preprocessed_images_task = preprocessor(image_urls)
+        # ndvi_results, rendvi_results, cire_results, pri_results = calculate_indexes(preprocessed_images)
+        # index_result_data = create_responsev2(ndvi_results, rendvi_results, cire_results, pri_results)
         
-        if index_result_data:
-            responses.append({'project_id': project_id, 'status': 'analyzed successfully', 'index_results': index_result_data})
+        # if index_result_data:
+        #     responses.append({'project_id': project_id, 'status': 'analyzed successfully', 'index_results': index_result_data})
+        if preprocessed_images_task:
+            responses.append({'project_id': project_id, 'task_id': preprocessed_images_task.id})
         else:
             responses.append({'project_id': project_id, 'status': 'analysis failed'})   
 
@@ -116,3 +117,30 @@ def analysis_controller(project_id):
         responses.append({'project_id': project_id, 'error': str(e)})
 
     return jsonify(responses), 200
+
+def get_task_status(task_id):
+    task = preprocessor.AsyncResult(task_id)
+    
+    if task.state == 'PENDING':
+        response = {
+            'state': task.state,
+            'status': 'Pending...'
+        }
+    elif task.state == 'SUCCESS':
+        result = task.result        
+        response = {
+            'state': task.state,
+            'result': result
+        }
+    elif task.state == 'FAILURE':
+        response = {
+            'state': task.state,
+            'status': str(task.info)
+        }
+    else:
+        response = {
+            'state': task.state,
+            'status': task.info
+        }
+
+    return jsonify(response)

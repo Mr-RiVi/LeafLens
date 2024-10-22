@@ -156,3 +156,76 @@ def calculate_indexes(image_set):
     pri_results = calculate_pri(image_set.get('Green'), image_set.get('RE'))
 
     return ndvi_results, rendvi_results, cire_results, pri_results
+
+def calculate_ndvi_index_full_map(result_image_red, result_image_nir):
+    result_image_red = result_image_red.astype(np.float64)
+    result_image_nir = result_image_nir.astype(np.float64)
+
+    #ndvi calculation, empty cells or nodata cells are reported as 0
+    ndvi=np.where(
+        (result_image_nir+result_image_red)==0., 
+        0, 
+        (result_image_nir-result_image_red)/(result_image_nir+result_image_red))
+    ndvi[:5,:5]
+
+    return ndvi
+
+def calculate_ndvi(result_image_red, result_image_nir):
+    ndvi=np.where(
+        (result_image_nir+result_image_red)==0., 
+        0, 
+        (result_image_nir-result_image_red)/(result_image_nir+result_image_red))
+    ndvi[:5,:5]
+
+    return ndvi
+
+# Function to calculate RENDVI
+def calculate_rendvi(nir_patch, red_edge_patch):
+    return np.where((nir_patch + red_edge_patch) == 0., 0, (nir_patch - red_edge_patch) / (nir_patch + red_edge_patch))
+
+# Function to calculate CIRE
+def calculate_cire(nir_patch, red_patch):
+    return np.where(red_patch == 0., 0, nir_patch / red_patch - 1)
+
+# Function to calculate PRI
+def calculate_pri(green_patch, red_patch):
+    return np.where((green_patch + red_patch) == 0., 0, (green_patch - red_patch) / (green_patch + red_patch))
+
+def calculate_indices_and_stats_for_patches(band1_patches, band2_patches, index_calculation_func, index_name):
+    # Dictionary to hold the index stats
+    index_stats_dict = {}
+
+    # Loop through patches and calculate the index
+    for i in range(band1_patches.shape[0]):
+        for j in range(band1_patches.shape[1]):
+            # Get the corresponding band patches
+            band1_patch = band1_patches[i, j, :, :].astype(np.float64)
+            band2_patch = band2_patches[i, j, :, :].astype(np.float64)
+
+            # Apply the index calculation function
+            index_patch = index_calculation_func(band1_patch, band2_patch)
+
+            # Compute statistics for the patch
+            mean_index = np.mean(index_patch)
+            median_index = np.median(index_patch)
+            min_index = np.min(index_patch)
+            max_index = np.max(index_patch)
+            std_dev_index = np.std(index_patch)
+
+            # Create a unique string key for the patch
+            key = f"patch_row_{i}_col_{j}"
+
+            # Store stats in the dictionary with unique string key
+            if key not in index_stats_dict:
+                index_stats_dict[key] = {}
+
+            # Add index stats to the dictionary
+            index_stats_dict[key][index_name] = {
+                'mean': mean_index,
+                'median': median_index,
+                'min': min_index,
+                'max': max_index,
+                'std_dev': std_dev_index
+            }
+
+    return index_stats_dict
