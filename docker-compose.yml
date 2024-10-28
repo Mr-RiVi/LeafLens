@@ -1,0 +1,35 @@
+services:
+  app:
+    build:
+      context: ./ # Path to your Flask backend Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - rabbitmq
+      - celery-worker # Ensures the worker is up before the backend starts
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@localhost/leaflens
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672" # RabbitMQ message broker port
+      - "15672:15672" # RabbitMQ management interface
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
+  celery-worker:
+    build:
+      context: ./ # Use the same Dockerfile as Flask backend if Celery is in the same codebase
+    depends_on:
+      - rabbitmq # Celery needs RabbitMQ to be running
+    command: celery -A app.celery worker --concurrency=1 --loglevel=info
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - CELERY_BROKER_URL=pyamqp://guest@localhost//
+      - CELERY_RESULT_BACKEND=rpc://

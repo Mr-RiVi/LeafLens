@@ -98,7 +98,6 @@ def analysis_controller(project_id):
     
     # Extract URLs from the image objects
     image_urls = [image.image_url for image in images]
-    responses = []
     
     try:
         preprocessed_images_task = preprocessor.apply_async(args=[image_urls])
@@ -109,14 +108,23 @@ def analysis_controller(project_id):
         # if index_result_data:
         #     responses.append({'project_id': project_id, 'status': 'analyzed successfully', 'index_results': index_result_data})
         if preprocessed_images_task:
-            responses.append({'project_id': project_id, 'task_id': preprocessed_images_task.id})
+            response = {
+            'project_id': project_id,
+            'task_id': preprocessed_images_task.id
+        }
         else:
-            responses.append({'project_id': project_id, 'status': 'analysis failed'})   
+            response = {
+            'project_id': project_id,
+            'status': 'analysis failed'
+        }  
 
     except Exception as e:
-        responses.append({'project_id': project_id, 'error': str(e)})
+        response = {
+        'project_id': project_id,
+        'error': str(e)
+    }
 
-    return jsonify(responses), 200
+    return jsonify(response), 200
 
 def get_task_status(task_id):
     task = preprocessor.AsyncResult(task_id)

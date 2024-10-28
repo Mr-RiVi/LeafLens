@@ -170,7 +170,7 @@ def calculate_ndvi_index_full_map(result_image_red, result_image_nir):
 
     return ndvi
 
-def calculate_ndvi(result_image_red, result_image_nir):
+def calculate_ndvi(result_image_nir, result_image_red):
     ndvi=np.where(
         (result_image_nir+result_image_red)==0., 
         0, 
@@ -192,11 +192,12 @@ def calculate_pri(green_patch, red_patch):
     return np.where((green_patch + red_patch) == 0., 0, (green_patch - red_patch) / (green_patch + red_patch))
 
 def calculate_indices_and_stats_for_patches(band1_patches, band2_patches, index_calculation_func, index_name):
-    # Dictionary to hold the index stats
-    index_stats_dict = {}
+    patches = []
+    patch_list = []
 
     # Loop through patches and calculate the index
     for i in range(band1_patches.shape[0]):
+        row_patches = []
         for j in range(band1_patches.shape[1]):
             # Get the corresponding band patches
             band1_patch = band1_patches[i, j, :, :].astype(np.float64)
@@ -204,6 +205,7 @@ def calculate_indices_and_stats_for_patches(band1_patches, band2_patches, index_
 
             # Apply the index calculation function
             index_patch = index_calculation_func(band1_patch, band2_patch)
+            row_patches.append(index_patch)
 
             # Compute statistics for the patch
             mean_index = np.mean(index_patch)
@@ -212,20 +214,22 @@ def calculate_indices_and_stats_for_patches(band1_patches, band2_patches, index_
             max_index = np.max(index_patch)
             std_dev_index = np.std(index_patch)
 
-            # Create a unique string key for the patch
-            key = f"patch_row_{i}_col_{j}"
-
-            # Store stats in the dictionary with unique string key
-            if key not in index_stats_dict:
-                index_stats_dict[key] = {}
-
-            # Add index stats to the dictionary
-            index_stats_dict[key][index_name] = {
-                'mean': mean_index,
-                'median': median_index,
-                'min': min_index,
-                'max': max_index,
-                'std_dev': std_dev_index
+            # Add the stats to the list for this patch
+            patch_stats = {
+                index_name: {
+                    'mean': mean_index,
+                    'median': median_index,
+                    'min': min_index,
+                    'max': max_index,
+                    'std_dev': std_dev_index
+                },
+                'row': i,
+                'column': j
             }
 
-    return index_stats_dict
+            # Append the patch stats to the list
+            patch_list.append(patch_stats)
+        
+        patches.append(row_patches)
+    patches = np.array(patches)
+    return patches, patch_list

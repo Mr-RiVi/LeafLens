@@ -166,15 +166,18 @@ def patch_and_normalize_for_prediction( image, image_patch_size):
     return send_for_pred, patched_images
     
 def remove_background(image, binary_mask):
-
     # Check if the input image is 3-channel or 1-channel
     if len(image.shape) == 3 and image.shape[2] == 3:  # RGB Image
         binary_mask = (binary_mask * 255).astype(np.uint8) 
         binary_mask_3channel = cv2.cvtColor(binary_mask, cv2.COLOR_GRAY2BGR)
         result_image = cv2.bitwise_and(image, binary_mask_3channel)
-    elif len(image.shape) == 2:  # 1-channel Image
+    elif len(image.shape) == 2 and image.dtype == 'uint16':  # 1-channel Image
         # Use the binary mask directly for 1-channel image
         binary_mask = (binary_mask * 65535).astype(np.uint16) 
+        result_image = cv2.bitwise_and(image, binary_mask)
+    elif len(image.shape) == 2 and image.dtype == 'uint8':  # 1-channel Image
+        # Use the binary mask directly for 1-channel image
+        binary_mask = (binary_mask * 255).astype(np.uint8) 
         result_image = cv2.bitwise_and(image, binary_mask)
     else:
         raise ValueError("Input image must be either a 1-channel or a 3-channel image.")
@@ -215,21 +218,25 @@ def preprocessor(self, image_urls):
         green_band_patches = patchify(result_image_green, (image_patch_size, image_patch_size), step=image_patch_size)
         re_band_patches = patchify(result_image_re, (image_patch_size, image_patch_size), step=image_patch_size)
 
-        ndvi_stats = calculate_indices_and_stats_for_patches(nir_band_patches, red_band_patches, calculate_ndvi, 'ndvi')
-        rendvi_stats = calculate_indices_and_stats_for_patches(nir_band_patches, re_band_patches, calculate_rendvi, 'rendvi')
-        cire_stats = calculate_indices_and_stats_for_patches(nir_band_patches, red_band_patches, calculate_cire, 'cire')
-        pri_stats = calculate_indices_and_stats_for_patches(green_band_patches, red_band_patches, calculate_pri, 'pri')
-
+        ndvi_patches, ndvi_stats = calculate_indices_and_stats_for_patches(nir_band_patches, red_band_patches, calculate_ndvi, 'ndvi')
+        rendvi_patches, rendvi_stats = calculate_indices_and_stats_for_patches(nir_band_patches, re_band_patches, calculate_rendvi, 'rendvi')
+        cire_patches, cire_stats = calculate_indices_and_stats_for_patches(nir_band_patches, red_band_patches, calculate_cire, 'cire')
+        pri_patches, pri_stats = calculate_indices_and_stats_for_patches(green_band_patches, red_band_patches, calculate_pri, 'pri')
+        
         # Combine all stats into one dictionary
-        combined_stats = {}
-        for key in ndvi_stats.keys():
-            combined_stats[key] = {
-                'ndvi': ndvi_stats[key]['ndvi'],
-                'rendvi': rendvi_stats[key]['rendvi'],
-                'cire': cire_stats[key]['cire'],
-                'pri': pri_stats[key]['pri']
+        patches = []
+        for ndvi_patch, rendvi_patch, cire_patch, pri_patch in zip(ndvi_stats, rendvi_stats, cire_stats, pri_stats):
+                # Merge all index stats for the same patch
+            combined_patch = {
+                'ndvi': ndvi_patch['ndvi'],
+                'rendvi': rendvi_patch['rendvi'],
+                'cire': cire_patch['cire'],
+                'pri': pri_patch['pri'],
+                'row': ndvi_patch['row'],
+                'column': ndvi_patch['column']
             }
-        return combined_stats
+            patches.append(combined_patch)
+        return {"patches": patches}
     except Exception as e:
         self.update_state(state='FAILURE', meta={'exc': str(e)})
         raise e

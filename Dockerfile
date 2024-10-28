@@ -1,21 +1,27 @@
-# Production stage
-FROM python:3.12-slim
+FROM python:3.10-slim
 
-WORKDIR /python-docker
+WORKDIR /app
 
-# Copy only the necessary files for production
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application code into the container
 COPY . .
 
-# Create a new user with UID 10016
-RUN groupadd -g 10016 choreo && \
-    useradd -u 10016 -g choreo -m choreouser
+# Set environment variables
+ENV FLASK_APP=main.py
+ENV FLASK_RUN_HOST=0.0.0.0
 
-USER 10016
-
+# Expose port 5000 to the outside world
 EXPOSE 5000
 
 # Start the Flask application
-CMD ["flask", "run", "--host=0.0.0.0"]
+CMD ["flask", "run"]
